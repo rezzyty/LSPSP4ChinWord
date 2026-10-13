@@ -1,0 +1,6 @@
+{
+  "name": "四年級中文詞語彈弓大冒險 (Angry Birds 詞語大作戰)",
+  "description": "專為小學四年級學生設計的互動中文詞語學習平台，融合經典彈弓射擊闖關機制，涵蓋課文重點字詞對照、多套隨機題庫練習與即時反饋獎勵。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
