@@ -397,6 +397,8 @@ export default function App() {
           correctCount={randomizedQuestions.length - wrongQuestions.length}
           piggiesDefeated={piggiesDefeated}
           wrongQuestions={wrongQuestions}
+          vocabularies={currentLesson.vocabularies}
+          dialect={dialect}
           onRestartSession={handleRestartSession}
           onOpenMiniGame={() => {
             setIsFinished(false);
