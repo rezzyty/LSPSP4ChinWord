@@ -11,6 +11,7 @@ interface HeaderNavProps {
   dialect: ChineseDialect;
   onToggleDialect: () => void;
   activeLessonTitle: string;
+  hasCompletedAtLeastOneSet: boolean;
 }
 
 export const HeaderNav: React.FC<HeaderNavProps> = ({
@@ -22,6 +23,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   dialect,
   onToggleDialect,
   activeLessonTitle,
+  hasCompletedAtLeastOneSet,
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full bg-amber-950/90 backdrop-blur-md border-b-2 border-amber-800 text-white shadow-md">
@@ -58,10 +60,17 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
 
           <button
             onClick={onOpenMiniGame}
-            className="text-amber-200 hover:text-yellow-300 transition-colors whitespace-nowrap flex items-center gap-1.5"
+            className={`transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+              hasCompletedAtLeastOneSet ? 'text-amber-200 hover:text-yellow-300' : 'text-amber-400/80 hover:text-amber-300'
+            }`}
           >
-            <Crosshair className="w-4 h-4 text-emerald-400" />
+            <Crosshair className={`w-4 h-4 ${hasCompletedAtLeastOneSet ? 'text-emerald-400' : 'text-amber-400'}`} />
             <span>自由彈弓靶場</span>
+            {!hasCompletedAtLeastOneSet && (
+              <span className="ml-1 px-1.5 py-0.5 bg-amber-800 text-yellow-300 text-[10px] rounded-md font-mono border border-amber-600">
+                🔒 需完成1組
+              </span>
+            )}
           </button>
         </nav>
 

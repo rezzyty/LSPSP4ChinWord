@@ -46,6 +46,8 @@ export default function App() {
   const [activeBird, setActiveBird] = useState<BirdType>('red');
   const [launchTrigger, setLaunchTrigger] = useState<number>(0);
   const [isMiniGameOpen, setIsMiniGameOpen] = useState<boolean>(false);
+  const [hasCompletedAtLeastOneSet, setHasCompletedAtLeastOneSet] = useState<boolean>(false);
+  const [showLockedAlert, setShowLockedAlert] = useState<boolean>(false);
 
   // Sound & Dialect
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -163,7 +165,17 @@ export default function App() {
       setCurrentQuestionIndex((i) => i + 1);
     } else {
       setIsFinished(true);
+      setHasCompletedAtLeastOneSet(true);
     }
+  };
+
+  // Open Mini Game with requirement check
+  const handleOpenMiniGame = () => {
+    if (!hasCompletedAtLeastOneSet) {
+      setShowLockedAlert(true);
+      return;
+    }
+    setIsMiniGameOpen(true);
   };
 
   // Sound mute toggle
@@ -189,12 +201,13 @@ export default function App() {
       <HeaderNav
         currentView={currentView}
         onViewChange={setCurrentView}
-        onOpenMiniGame={() => setIsMiniGameOpen(true)}
+        onOpenMiniGame={handleOpenMiniGame}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
         dialect={dialect}
         onToggleDialect={handleToggleDialect}
         activeLessonTitle={currentLesson.title}
+        hasCompletedAtLeastOneSet={hasCompletedAtLeastOneSet}
       />
 
       {/* Main Content Area - Optimized for NO SCROLL */}
@@ -418,6 +431,31 @@ export default function App() {
         onClose={() => setIsMiniGameOpen(false)}
         earnedScore={score}
       />
+
+      {/* Locked MiniGame Alert Modal */}
+      {showLockedAlert && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full border-4 border-amber-400 shadow-2xl text-center space-y-4 animate-scaleUp">
+            <div className="w-16 h-16 mx-auto bg-amber-100 rounded-full flex items-center justify-center text-3xl">
+              🔒
+            </div>
+            <h3 className="text-xl font-black text-amber-950 font-serif">
+              自由彈弓靶場尚未解鎖！
+            </h3>
+            <p className="text-sm text-slate-700 font-medium leading-relaxed">
+              為了鼓勵認真學習，請先完成至少 **1 組中文詞語練習題**（完成全部題目並檢視成績），即可解鎖刺激有趣的彈弓打豬靶場！
+            </p>
+            <div className="pt-2">
+              <button
+                onClick={() => setShowLockedAlert(false)}
+                className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-sm rounded-2xl shadow-md border-b-4 border-amber-700 transition-transform active:scale-95"
+              >
+                我知道了，馬上開始做練習！ 🚀
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
