@@ -179,8 +179,15 @@ export function chargeResources(
   id: 'melaine' | 'jayden' | 'others',
   params: {
     addCoins?: number;
+    setCoins?: number;
     addDiamonds?: number;
+    setDiamonds?: number;
     addPowerUps?: number;
+    resetCoinsToZero?: boolean;
+    resetDiamondsToZero?: boolean;
+    resetPowerUpsToZero?: boolean;
+    resetAllToZero?: boolean;
+    resetUnlockedHeroes?: boolean;
     unlockAllBirds?: boolean;
     unlockAllBackgrounds?: boolean;
     fillPowerUps?: number;
@@ -189,21 +196,60 @@ export function chargeResources(
 ): UserProfile {
   const p = loadProfile(id);
 
-  if (params.addCoins) {
-    p.coins = Math.max(0, p.coins + params.addCoins);
-  }
-  if (params.addDiamonds) {
-    p.diamonds = Math.max(0, p.diamonds + params.addDiamonds);
-  }
-  if (params.addPowerUps) {
-    const add = params.addPowerUps;
+  if (params.resetAllToZero) {
+    p.coins = 0;
+    p.diamonds = 0;
     p.powerUps = {
-      laser_scope: (p.powerUps.laser_scope || 0) + add,
-      king_sling: (p.powerUps.king_sling || 0) + add,
-      super_seed: (p.powerUps.super_seed || 0) + add,
-      speed_potion: (p.powerUps.speed_potion || 0) + add,
-      tnt_rain: (p.powerUps.tnt_rain || 0) + add,
+      laser_scope: 0,
+      king_sling: 0,
+      super_seed: 0,
+      speed_potion: 0,
+      tnt_rain: 0,
     };
+    p.activePowerUps = {};
+  } else {
+    if (params.resetCoinsToZero) {
+      p.coins = 0;
+    } else if (params.setCoins !== undefined) {
+      p.coins = Math.max(0, params.setCoins);
+    } else if (params.addCoins) {
+      p.coins = Math.max(0, p.coins + params.addCoins);
+    }
+
+    if (params.resetDiamondsToZero) {
+      p.diamonds = 0;
+    } else if (params.setDiamonds !== undefined) {
+      p.diamonds = Math.max(0, params.setDiamonds);
+    } else if (params.addDiamonds) {
+      p.diamonds = Math.max(0, p.diamonds + params.addDiamonds);
+    }
+
+    if (params.resetPowerUpsToZero) {
+      p.powerUps = {
+        laser_scope: 0,
+        king_sling: 0,
+        super_seed: 0,
+        speed_potion: 0,
+        tnt_rain: 0,
+      };
+      p.activePowerUps = {};
+    } else if (params.addPowerUps) {
+      const add = params.addPowerUps;
+      p.powerUps = {
+        laser_scope: (p.powerUps.laser_scope || 0) + add,
+        king_sling: (p.powerUps.king_sling || 0) + add,
+        super_seed: (p.powerUps.super_seed || 0) + add,
+        speed_potion: (p.powerUps.speed_potion || 0) + add,
+        tnt_rain: (p.powerUps.tnt_rain || 0) + add,
+      };
+    }
+  }
+
+  if (params.resetUnlockedHeroes) {
+    p.unlockedBirds = ['red'];
+    p.selectedBird = 'red';
+    p.unlockedBackgrounds = ['green_hills'];
+    p.selectedBackground = 'green_hills';
   }
   if (params.unlockAllBirds) {
     p.unlockedBirds = [

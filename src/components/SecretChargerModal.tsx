@@ -13,10 +13,11 @@ import {
   Image,
   Zap,
   CheckCircle2,
-  Plus,
   SlidersHorizontal,
   Flame,
-  ShieldAlert
+  RotateCcw,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface SecretChargerModalProps {
@@ -32,7 +33,7 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
   currentProfile,
   onProfileUpdated,
 }) => {
-  const [activeTab, setActiveTab] = useState<'small' | 'mega'>('small');
+  const [activeTab, setActiveTab] = useState<'small' | 'mega' | 'reset'>('small');
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
   // Custom input states for small precision amounts
@@ -41,18 +42,22 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
 
   if (!isOpen) return null;
 
-  const triggerCelebration = (msg: string) => {
+  const triggerToast = (msg: string, isReset = false) => {
     setFeedbackMsg(msg);
-    soundEffects.playFanfare();
-    try {
-      confetti({
-        particleCount: 70,
-        spread: 60,
-        origin: { y: 0.6 },
-        colors: ['#F59E0B', '#EF4444', '#10B981', '#3B82F6', '#8B5CF6'],
-      });
-    } catch {
-      // ignore
+    if (isReset) {
+      soundEffects.playPiggyPop();
+    } else {
+      soundEffects.playFanfare();
+      try {
+        confetti({
+          particleCount: 70,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ['#F59E0B', '#EF4444', '#10B981', '#3B82F6', '#8B5CF6'],
+        });
+      } catch {
+        // ignore
+      }
     }
     setTimeout(() => {
       setFeedbackMsg(null);
@@ -63,45 +68,77 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
     if (amount <= 0 || isNaN(amount)) return;
     const updated = chargeResources(currentProfile.id, { addCoins: amount });
     onProfileUpdated(updated);
-    triggerCelebration(`🪙 成功充值 +${amount.toLocaleString()} 金幣！`);
+    triggerToast(`🪙 成功充值 +${amount.toLocaleString()} 金幣！`);
   };
 
   const handleAddDiamonds = (amount: number) => {
     if (amount <= 0 || isNaN(amount)) return;
     const updated = chargeResources(currentProfile.id, { addDiamonds: amount });
     onProfileUpdated(updated);
-    triggerCelebration(`💎 成功充值 +${amount.toLocaleString()} 顆鑽石！`);
+    triggerToast(`💎 成功充值 +${amount.toLocaleString()} 顆鑽石！`);
   };
 
   const handleAddPowerUps = (count: number) => {
     if (count <= 0 || isNaN(count)) return;
     const updated = chargeResources(currentProfile.id, { addPowerUps: count });
     onProfileUpdated(updated);
-    triggerCelebration(`⚡ 成功補充戰鬥道具！各增加 +${count} 個！`);
+    triggerToast(`⚡ 成功補充戰鬥道具！各增加 +${count} 個！`);
   };
 
+  // --- Reset Actions ---
+  const handleResetCoins = () => {
+    const updated = chargeResources(currentProfile.id, { resetCoinsToZero: true });
+    onProfileUpdated(updated);
+    triggerToast(`🪙 已將【${currentProfile.name}】的金幣成功重置為 0！`, true);
+  };
+
+  const handleResetDiamonds = () => {
+    const updated = chargeResources(currentProfile.id, { resetDiamondsToZero: true });
+    onProfileUpdated(updated);
+    triggerToast(`💎 已將【${currentProfile.name}】的鑽石成功重置為 0！`, true);
+  };
+
+  const handleResetPowerUps = () => {
+    const updated = chargeResources(currentProfile.id, { resetPowerUpsToZero: true });
+    onProfileUpdated(updated);
+    triggerToast(`⚡ 已將【${currentProfile.name}】的所有戰鬥道具清空為 0！`, true);
+  };
+
+  const handleResetAllToZero = () => {
+    const updated = chargeResources(currentProfile.id, { resetAllToZero: true });
+    onProfileUpdated(updated);
+    triggerToast(`🧹 已將【${currentProfile.name}】的金幣、鑽石及道具全數歸零！`, true);
+  };
+
+  const handleResetUnlockedHeroes = () => {
+    const updated = chargeResources(currentProfile.id, { resetUnlockedHeroes: true });
+    onProfileUpdated(updated);
+    triggerToast(`🐣 已重置角色為初始狀態（僅保留怒鳥紅與翡翠山丘）！`, true);
+  };
+
+  // --- Mega Unlocks ---
   const handleUnlockAllBirds = () => {
     const updated = chargeResources(currentProfile.id, { unlockAllBirds: true });
     onProfileUpdated(updated);
-    triggerCelebration('🦅 成功解鎖全體 9 隻憤怒鳥經典英雄！');
+    triggerToast('🦅 成功解鎖全體 9 隻憤怒鳥經典英雄！');
   };
 
   const handleUnlockAllBackgrounds = () => {
     const updated = chargeResources(currentProfile.id, { unlockAllBackgrounds: true });
     onProfileUpdated(updated);
-    triggerCelebration('🌄 成功解鎖全體 5 大精緻戰鬥主題背景！');
+    triggerToast('🌄 成功解鎖全體 5 大精緻戰鬥主題背景！');
   };
 
   const handleFillPowerUps = (count = 20) => {
     const updated = chargeResources(currentProfile.id, { fillPowerUps: count });
     onProfileUpdated(updated);
-    triggerCelebration(`⚡ 全體戰術道具補滿至各 ${count} 個！`);
+    triggerToast(`⚡ 全體戰術道具補滿至各 ${count} 個！`);
   };
 
   const handleCompleteAllSets = () => {
     const updated = chargeResources(currentProfile.id, { completeAllSets: true });
     onProfileUpdated(updated);
-    triggerCelebration('🎓 成功標記全部課文練習通關，自由靶場已解鎖！');
+    triggerToast('🎓 成功標記全部課文練習通關，自由靶場已解鎖！');
   };
 
   const handleCustomCoinSubmit = (e: React.FormEvent) => {
@@ -137,7 +174,7 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
                 </span>
               </h3>
               <p className="text-xs text-amber-200/80 font-medium">
-                專屬秘密特權功能：即時為當前學員【{currentProfile.name}】充值金幣、鑽石與資源！
+                專屬秘密特權功能：即時為當前學員【{currentProfile.name}】充值或重置金幣、鑽石與資源！
               </p>
             </div>
           </div>
@@ -176,7 +213,7 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
           </div>
         </div>
 
-        {/* Success Alert Banner */}
+        {/* Feedback Alert Banner */}
         {feedbackMsg && (
           <div className="p-3 bg-emerald-500/90 text-white font-bold text-xs sm:text-sm rounded-xl border border-emerald-300 flex items-center justify-center gap-2 animate-bounce">
             <CheckCircle2 className="w-5 h-5" />
@@ -184,29 +221,42 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
           </div>
         )}
 
-        {/* Navigation Tabs between Small Amount & Mega Boost */}
-        <div className="flex items-center gap-2 p-1 bg-black/50 rounded-2xl border border-white/10">
+        {/* Navigation Tabs (Small Amount, Mega Boost, Reset to Zero) */}
+        <div className="flex items-center gap-1.5 p-1 bg-black/50 rounded-2xl border border-white/10 flex-wrap sm:flex-nowrap">
           <button
             onClick={() => setActiveTab('small')}
-            className={`flex-1 py-2 px-3 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 py-2 px-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'small'
                 ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow-md'
                 : 'text-amber-200 hover:text-white hover:bg-white/5'
             }`}
           >
             <SlidersHorizontal className="w-4 h-4" />
-            <span>🪙 小額精準充值 (Smaller Amounts)</span>
+            <span>🪙 小額充值</span>
           </button>
+
           <button
             onClick={() => setActiveTab('mega')}
-            className={`flex-1 py-2 px-3 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 py-2 px-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'mega'
                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
                 : 'text-indigo-200 hover:text-white hover:bg-white/5'
             }`}
           >
             <Flame className="w-4 h-4 text-amber-300" />
-            <span>🚀 進階一鍵全解鎖 (Mega Unlocks)</span>
+            <span>🚀 一鍵解鎖</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('reset')}
+            className={`flex-1 py-2 px-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'reset'
+                ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-md'
+                : 'text-rose-300 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <RotateCcw className="w-4 h-4 text-rose-300" />
+            <span>🔄 資產歸零 (Reset)</span>
           </button>
         </div>
 
@@ -220,7 +270,13 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
                   <Coins className="w-4 h-4 text-yellow-400" />
                   <span>小額金幣快捷按鈕 (+50 ~ +2,500)</span>
                 </span>
-                <span className="text-[10px] text-amber-200/70 font-mono">點擊即時入帳</span>
+                <button
+                  onClick={handleResetCoins}
+                  className="text-[10px] text-rose-300 hover:text-rose-200 font-bold px-2 py-0.5 rounded-md bg-rose-950/60 border border-rose-500/40 cursor-pointer"
+                  title="將當前金幣歸零"
+                >
+                  重置金幣為 0
+                </button>
               </div>
 
               {/* Coin Quick Chips */}
@@ -268,7 +324,13 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
                   <Gem className="w-4 h-4 text-cyan-300" />
                   <span>小額鑽石快捷按鈕 (+2 ~ +100)</span>
                 </span>
-                <span className="text-[10px] text-sky-200/70 font-mono">點擊即時入帳</span>
+                <button
+                  onClick={handleResetDiamonds}
+                  className="text-[10px] text-rose-300 hover:text-rose-200 font-bold px-2 py-0.5 rounded-md bg-rose-950/60 border border-rose-500/40 cursor-pointer"
+                  title="將當前鑽石歸零"
+                >
+                  重置鑽石為 0
+                </button>
               </div>
 
               {/* Diamond Quick Chips */}
@@ -314,7 +376,7 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-purple-300" />
                 <span className="text-xs font-bold text-purple-200">
-                  小額道具補給 (雷射瞄準、國王彈弓、生長種子等)
+                  小額道具補給 (各增加 +1 ~ +5)
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -327,6 +389,13 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
                     各 +{cnt} 個
                   </button>
                 ))}
+                <button
+                  onClick={handleResetPowerUps}
+                  className="px-2.5 py-1.5 bg-rose-950/50 hover:bg-rose-900 border border-rose-500/40 text-rose-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                  title="將道具庫存清空"
+                >
+                  清零道具
+                </button>
               </div>
             </div>
           </div>
@@ -410,6 +479,107 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
                   <span className="text-xs sm:text-sm">解鎖自由彈弓靶場</span>
                 </div>
                 <span className="text-xs font-bold bg-white/30 px-2 py-0.5 rounded-lg">靶場即玩</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: RESET TO ZERO (NEW!) */}
+        {activeTab === 'reset' && (
+          <div className="space-y-3 py-1">
+            <div className="flex items-center gap-2 p-2.5 bg-rose-950/60 rounded-xl border border-rose-500/40 text-xs text-rose-200 font-medium">
+              <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+              <span>
+                重置功能將把當前角色【<strong>{currentProfile.name}</strong>】的指定資源重設為 0，方便從零開始測試獎勵升級或重新累積資產。
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Reset Coins to 0 */}
+              <button
+                onClick={handleResetCoins}
+                className="p-3.5 bg-gradient-to-r from-slate-800 to-rose-950 hover:from-slate-700 hover:to-rose-900 text-white font-bold rounded-2xl border border-rose-500/50 shadow-md flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5 text-left">
+                  <div className="p-2 rounded-xl bg-amber-500/20 text-yellow-400">
+                    <Coins className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs sm:text-sm font-black text-rose-200">金幣重置為 0</div>
+                    <div className="text-[10px] text-slate-400">目前：{currentProfile.coins.toLocaleString()} 🪙</div>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold bg-rose-600/60 text-white px-2.5 py-1 rounded-xl">
+                  重設為 0
+                </span>
+              </button>
+
+              {/* Reset Diamonds to 0 */}
+              <button
+                onClick={handleResetDiamonds}
+                className="p-3.5 bg-gradient-to-r from-slate-800 to-rose-950 hover:from-slate-700 hover:to-rose-900 text-white font-bold rounded-2xl border border-rose-500/50 shadow-md flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5 text-left">
+                  <div className="p-2 rounded-xl bg-sky-500/20 text-cyan-400">
+                    <Gem className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs sm:text-sm font-black text-rose-200">鑽石重置為 0</div>
+                    <div className="text-[10px] text-slate-400">目前：{currentProfile.diamonds.toLocaleString()} 💎</div>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold bg-rose-600/60 text-white px-2.5 py-1 rounded-xl">
+                  重設為 0
+                </span>
+              </button>
+
+              {/* Reset Power-ups to 0 */}
+              <button
+                onClick={handleResetPowerUps}
+                className="p-3.5 bg-gradient-to-r from-slate-800 to-rose-950 hover:from-slate-700 hover:to-rose-900 text-white font-bold rounded-2xl border border-rose-500/50 shadow-md flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5 text-left">
+                  <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs sm:text-sm font-black text-rose-200">清空所有戰鬥道具</div>
+                    <div className="text-[10px] text-slate-400">雷射瞄準、國王彈弓等全數歸 0</div>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold bg-rose-600/60 text-white px-2.5 py-1 rounded-xl">
+                  清零道具
+                </span>
+              </button>
+
+              {/* Reset Unlocks to Default */}
+              <button
+                onClick={handleResetUnlockedHeroes}
+                className="p-3.5 bg-gradient-to-r from-slate-800 to-amber-950 hover:from-slate-700 hover:to-amber-900 text-white font-bold rounded-2xl border border-amber-500/50 shadow-md flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5 text-left">
+                  <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
+                    <Bird className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs sm:text-sm font-black text-amber-200">重置角色與背景為初始</div>
+                    <div className="text-[10px] text-slate-400">重置為僅擁有怒鳥紅與翡翠山丘</div>
+                  </div>
+                </div>
+                <span className="text-xs font-bold bg-amber-600/60 text-white px-2.5 py-1 rounded-xl">
+                  初始狀態
+                </span>
+              </button>
+            </div>
+
+            {/* Total Wipe Button */}
+            <div className="pt-2">
+              <button
+                onClick={handleResetAllToZero}
+                className="w-full p-3.5 bg-gradient-to-r from-rose-700 to-red-700 hover:from-rose-800 hover:to-red-800 text-white font-black text-sm rounded-2xl shadow-lg border-2 border-rose-400 flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
+              >
+                <Trash2 className="w-5 h-5" />
+                <span>全部資產一鍵歸零 (金幣 0 + 鑽石 0 + 道具 0)</span>
               </button>
             </div>
           </div>
