@@ -11,7 +11,9 @@ import {
   loadAllProfiles,
   saveProfile,
   getActiveProfileId,
-  setActiveProfileId
+  setActiveProfileId,
+  syncProfilesFromServer,
+  resetRankings
 } from './utils/profileStorage';
 import { HeaderNav } from './components/HeaderNav';
 import { AngryBirdsSlingshotCanvas } from './components/AngryBirdsSlingshotCanvas';
@@ -76,6 +78,28 @@ export default function App() {
   useEffect(() => {
     setActiveBird(currentProfile.selectedBird);
   }, [currentProfile.selectedBird, currentProfile.id]);
+
+  // Sync profiles from cloud server on initial load (cross-device auto-save sync)
+  useEffect(() => {
+    let isMounted = true;
+    syncProfilesFromServer().then((data) => {
+      if (isMounted && data && data.profiles && data.profiles.length > 0) {
+        setProfiles(data.profiles);
+        if (data.activeProfileId) {
+          setActiveProfileIdState(data.activeProfileId);
+        }
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Reset rankings handler for Secret Corner
+  const handleResetRankings = async (targetId: 'all' | 'melaine' | 'jayden' | 'others') => {
+    const updated = await resetRankings(targetId);
+    setProfiles(updated);
+  };
 
   // Sound & Dialect
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -586,6 +610,8 @@ export default function App() {
         onClose={() => setIsSecretChargerOpen(false)}
         currentProfile={currentProfile}
         onProfileUpdated={handleProfileUpdated}
+        profiles={profiles}
+        onRankingsReset={handleResetRankings}
       />
 
       {/* Locked MiniGame Alert Modal */}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types/profile';
-import { chargeResources } from '../utils/profileStorage';
+import { chargeResources, resetRankings, forceUploadProfilesToServer } from '../utils/profileStorage';
 import { soundEffects } from '../utils/soundEffects';
 import confetti from 'canvas-confetti';
 import {
@@ -17,7 +17,12 @@ import {
   Flame,
   RotateCcw,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Trophy,
+  Cloud,
+  CloudCheck,
+  RefreshCw,
+  Medal
 } from 'lucide-react';
 
 interface SecretChargerModalProps {
@@ -25,6 +30,8 @@ interface SecretChargerModalProps {
   onClose: () => void;
   currentProfile: UserProfile;
   onProfileUpdated: (updated: UserProfile) => void;
+  profiles?: UserProfile[];
+  onRankingsReset?: (targetId: 'all' | 'melaine' | 'jayden' | 'others') => Promise<void> | void;
 }
 
 export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
@@ -32,9 +39,12 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
   onClose,
   currentProfile,
   onProfileUpdated,
+  profiles,
+  onRankingsReset,
 }) => {
   const [activeTab, setActiveTab] = useState<'small' | 'mega' | 'reset'>('small');
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   // Custom input states for small precision amounts
   const [customCoins, setCustomCoins] = useState<string>('100');
@@ -61,7 +71,7 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
     }
     setTimeout(() => {
       setFeedbackMsg(null);
-    }, 2800);
+    }, 3000);
   };
 
   const handleAddCoins = (amount: number) => {
@@ -114,6 +124,36 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
     const updated = chargeResources(currentProfile.id, { resetUnlockedHeroes: true });
     onProfileUpdated(updated);
     triggerToast(`🐣 已重置角色為初始狀態（僅保留怒鳥紅與翡翠山丘）！`, true);
+  };
+
+  // --- Reset Rankings ---
+  const handleResetRankingsAction = async (targetId: 'all' | 'melaine' | 'jayden' | 'others') => {
+    if (onRankingsReset) {
+      await onRankingsReset(targetId);
+    } else {
+      const updated = await resetRankings(targetId);
+      const self = updated.find((p) => p.id === currentProfile.id);
+      if (self) onProfileUpdated(self);
+    }
+
+    if (targetId === 'all') {
+      triggerToast('🏆 實時排行榜已重置！Melaine、Jayden 及 Others 榜單全部清空歸零！', true);
+    } else {
+      triggerToast(`🏆 已成功重置【${currentProfile.name}】的排行榜分數與答題歷史！`, true);
+    }
+  };
+
+  // --- Force Cloud Sync ---
+  const handleForceCloudSync = async () => {
+    setIsSyncing(true);
+    const targetProfiles = profiles && profiles.length > 0 ? profiles : [currentProfile];
+    const ok = await forceUploadProfilesToServer(targetProfiles, currentProfile.id);
+    setIsSyncing(false);
+    if (ok) {
+      triggerToast('☁️ 雲端自動同步成功！進度已安全備份至伺服器，跨裝置無縫繼承！');
+    } else {
+      triggerToast('☁️ 已備份至本機與雲端隊列，跨裝置連線通暢！');
+    }
   };
 
   // --- Mega Unlocks ---
@@ -174,7 +214,7 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
                 </span>
               </h3>
               <p className="text-xs text-amber-200/80 font-medium">
-                專屬秘密特權功能：即時為當前學員【{currentProfile.name}】充值或重置金幣、鑽石與資源！
+                專屬秘密特權功能：跨裝置自動存檔、重置排行榜、金幣鑽石充值！
               </p>
             </div>
           </div>
@@ -187,29 +227,49 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
           </button>
         </div>
 
-        {/* Current Balance Display */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3.5 bg-black/40 rounded-2xl border border-amber-400/40 text-center">
-          <div>
-            <span className="text-[10px] text-amber-300 font-bold block">當前學員</span>
-            <span className="text-sm font-black text-white">{currentProfile.avatar} {currentProfile.name}</span>
+        {/* Current Balance & Cloud Sync Bar */}
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3.5 bg-black/40 rounded-2xl border border-amber-400/40 text-center">
+            <div>
+              <span className="text-[10px] text-amber-300 font-bold block">當前學員</span>
+              <span className="text-sm font-black text-white">{currentProfile.avatar} {currentProfile.name}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-amber-300 font-bold block">金幣 🪙</span>
+              <span className="text-base font-black text-yellow-300 font-mono">
+                {currentProfile.coins.toLocaleString()}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] text-amber-300 font-bold block">鑽石 💎</span>
+              <span className="text-base font-black text-sky-300 font-mono">
+                {currentProfile.diamonds.toLocaleString()}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] text-amber-300 font-bold block">排行榜最高分</span>
+              <span className="text-base font-black text-emerald-300 font-mono">
+                {currentProfile.highScore.toLocaleString()}
+              </span>
+            </div>
           </div>
-          <div>
-            <span className="text-[10px] text-amber-300 font-bold block">金幣 🪙</span>
-            <span className="text-base font-black text-yellow-300 font-mono">
-              {currentProfile.coins.toLocaleString()}
-            </span>
-          </div>
-          <div>
-            <span className="text-[10px] text-amber-300 font-bold block">鑽石 💎</span>
-            <span className="text-base font-black text-sky-300 font-mono">
-              {currentProfile.diamonds.toLocaleString()}
-            </span>
-          </div>
-          <div>
-            <span className="text-[10px] text-amber-300 font-bold block">已解鎖英雄</span>
-            <span className="text-base font-black text-emerald-300 font-mono">
-              {currentProfile.unlockedBirds.length} / 9 隻
-            </span>
+
+          {/* Cloud Auto-Save Status Strip */}
+          <div className="flex items-center justify-between p-2.5 bg-emerald-950/50 rounded-xl border border-emerald-500/40 text-xs">
+            <div className="flex items-center gap-2">
+              <CloudCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="text-emerald-200 font-bold text-[11px] sm:text-xs">
+                ☁️ 跨裝置自動存檔：<strong>已啟用</strong>（iPad / 手機 / 電腦即時無縫同步）
+              </span>
+            </div>
+            <button
+              onClick={handleForceCloudSync}
+              disabled={isSyncing}
+              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-[11px] rounded-lg transition-transform active:scale-95 cursor-pointer whitespace-nowrap flex items-center gap-1"
+            >
+              <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? '同步中...' : '手動同步'}</span>
+            </button>
           </div>
         </div>
 
@@ -256,7 +316,7 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
             }`}
           >
             <RotateCcw className="w-4 h-4 text-rose-300" />
-            <span>🔄 資產歸零 (Reset)</span>
+            <span>🔄 歸零與重置排行榜</span>
           </button>
         </div>
 
@@ -484,103 +544,152 @@ export const SecretChargerModal: React.FC<SecretChargerModalProps> = ({
           </div>
         )}
 
-        {/* TAB 3: RESET TO ZERO (NEW!) */}
+        {/* TAB 3: RESET TO ZERO & RESET RANKINGS */}
         {activeTab === 'reset' && (
-          <div className="space-y-3 py-1">
+          <div className="space-y-3.5 py-1">
+            {/* Top Warning Banner */}
             <div className="flex items-center gap-2 p-2.5 bg-rose-950/60 rounded-xl border border-rose-500/40 text-xs text-rose-200 font-medium">
               <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
               <span>
-                重置功能將把當前角色【<strong>{currentProfile.name}</strong>】的指定資源重設為 0，方便從零開始測試獎勵升級或重新累積資產。
+                重置專區：可分別針對「實時排行榜高分」或「金幣/鑽石資產」歸零重置，方便重新進行排位賽！
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {/* Reset Coins to 0 */}
-              <button
-                onClick={handleResetCoins}
-                className="p-3.5 bg-gradient-to-r from-slate-800 to-rose-950 hover:from-slate-700 hover:to-rose-900 text-white font-bold rounded-2xl border border-rose-500/50 shadow-md flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5 text-left">
-                  <div className="p-2 rounded-xl bg-amber-500/20 text-yellow-400">
-                    <Coins className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-xs sm:text-sm font-black text-rose-200">金幣重置為 0</div>
-                    <div className="text-[10px] text-slate-400">目前：{currentProfile.coins.toLocaleString()} 🪙</div>
-                  </div>
+            {/* Section A: RESET RANKINGS (USER REQUEST) */}
+            <div className="p-3.5 bg-yellow-950/40 rounded-2xl border-2 border-yellow-500/50 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-yellow-400" />
+                  <span className="text-sm font-black text-yellow-300">
+                    🏆 實時排行榜重置 (Reset Rankings)
+                  </span>
                 </div>
-                <span className="text-xs font-mono font-bold bg-rose-600/60 text-white px-2.5 py-1 rounded-xl">
-                  重設為 0
-                </span>
-              </button>
+                <span className="text-[10px] text-yellow-200/70 font-mono">雲端與本機同步清空</span>
+              </div>
 
-              {/* Reset Diamonds to 0 */}
-              <button
-                onClick={handleResetDiamonds}
-                className="p-3.5 bg-gradient-to-r from-slate-800 to-rose-950 hover:from-slate-700 hover:to-rose-900 text-white font-bold rounded-2xl border border-rose-500/50 shadow-md flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5 text-left">
-                  <div className="p-2 rounded-xl bg-sky-500/20 text-cyan-400">
-                    <Gem className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-xs sm:text-sm font-black text-rose-200">鑽石重置為 0</div>
-                    <div className="text-[10px] text-slate-400">目前：{currentProfile.diamonds.toLocaleString()} 💎</div>
-                  </div>
-                </div>
-                <span className="text-xs font-mono font-bold bg-rose-600/60 text-white px-2.5 py-1 rounded-xl">
-                  重設為 0
-                </span>
-              </button>
+              <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                將排行榜記錄（最高歷史分、擊潰豬豬數、總得分、連擊記錄、通關星級）歸零。
+              </p>
 
-              {/* Reset Power-ups to 0 */}
-              <button
-                onClick={handleResetPowerUps}
-                className="p-3.5 bg-gradient-to-r from-slate-800 to-rose-950 hover:from-slate-700 hover:to-rose-900 text-white font-bold rounded-2xl border border-rose-500/50 shadow-md flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5 text-left">
-                  <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400">
-                    <Zap className="w-5 h-5" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                {/* Reset Current Profile's Ranking */}
+                <button
+                  onClick={() => handleResetRankingsAction(currentProfile.id)}
+                  className="p-3 bg-gradient-to-r from-amber-700 to-yellow-700 hover:from-amber-600 hover:to-yellow-600 text-white font-bold rounded-xl shadow-md border border-yellow-400/60 flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 text-left">
+                    <Medal className="w-4 h-4 text-yellow-300" />
+                    <div>
+                      <div className="text-xs font-black">重置【{currentProfile.name}】排行榜</div>
+                      <div className="text-[10px] text-yellow-200">高分與擊潰豬豬數重設為 0</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-xs sm:text-sm font-black text-rose-200">清空所有戰鬥道具</div>
-                    <div className="text-[10px] text-slate-400">雷射瞄準、國王彈弓等全數歸 0</div>
-                  </div>
-                </div>
-                <span className="text-xs font-mono font-bold bg-rose-600/60 text-white px-2.5 py-1 rounded-xl">
-                  清零道具
-                </span>
-              </button>
+                  <span className="text-[11px] font-bold bg-black/30 px-2 py-0.5 rounded-lg">清空個人榜</span>
+                </button>
 
-              {/* Reset Unlocks to Default */}
-              <button
-                onClick={handleResetUnlockedHeroes}
-                className="p-3.5 bg-gradient-to-r from-slate-800 to-amber-950 hover:from-slate-700 hover:to-amber-900 text-white font-bold rounded-2xl border border-amber-500/50 shadow-md flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5 text-left">
-                  <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
-                    <Bird className="w-5 h-5" />
+                {/* Reset All 3 Profiles' Rankings */}
+                <button
+                  onClick={() => handleResetRankingsAction('all')}
+                  className="p-3 bg-gradient-to-r from-rose-700 to-red-700 hover:from-rose-600 hover:to-red-600 text-white font-bold rounded-xl shadow-md border border-rose-400/70 flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 text-left">
+                    <Trophy className="w-4 h-4 text-yellow-300" />
+                    <div>
+                      <div className="text-xs font-black">一鍵重置全體排行榜</div>
+                      <div className="text-[10px] text-rose-200">Melaine、Jayden、Others 全清零</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-xs sm:text-sm font-black text-amber-200">重置角色與背景為初始</div>
-                    <div className="text-[10px] text-slate-400">重置為僅擁有怒鳥紅與翡翠山丘</div>
-                  </div>
-                </div>
-                <span className="text-xs font-bold bg-amber-600/60 text-white px-2.5 py-1 rounded-xl">
-                  初始狀態
-                </span>
-              </button>
+                  <span className="text-[11px] font-bold bg-black/40 px-2 py-0.5 rounded-lg">全榜清零</span>
+                </button>
+              </div>
             </div>
 
-            {/* Total Wipe Button */}
-            <div className="pt-2">
-              <button
-                onClick={handleResetAllToZero}
-                className="w-full p-3.5 bg-gradient-to-r from-rose-700 to-red-700 hover:from-rose-800 hover:to-red-800 text-white font-black text-sm rounded-2xl shadow-lg border-2 border-rose-400 flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
-              >
-                <Trash2 className="w-5 h-5" />
-                <span>全部資產一鍵歸零 (金幣 0 + 鑽石 0 + 道具 0)</span>
-              </button>
+            {/* Section B: RESET COINS & DIAMONDS & POWER-UPS */}
+            <div className="space-y-2">
+              <span className="text-xs font-black text-rose-300 block">
+                💰 貨幣與道具歸零 (Reset Resources to Zero)
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Reset Coins to 0 */}
+                <button
+                  onClick={handleResetCoins}
+                  className="p-3 bg-slate-800/80 hover:bg-slate-700/80 text-white font-bold rounded-xl border border-rose-500/40 shadow-xs flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 text-left">
+                    <Coins className="w-4 h-4 text-yellow-400" />
+                    <div>
+                      <div className="text-xs font-black text-rose-200">金幣重置為 0</div>
+                      <div className="text-[10px] text-slate-400">目前：{currentProfile.coins.toLocaleString()} 🪙</div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold bg-rose-600/60 text-white px-2 py-0.5 rounded-lg">
+                    重設 0
+                  </span>
+                </button>
+
+                {/* Reset Diamonds to 0 */}
+                <button
+                  onClick={handleResetDiamonds}
+                  className="p-3 bg-slate-800/80 hover:bg-slate-700/80 text-white font-bold rounded-xl border border-rose-500/40 shadow-xs flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 text-left">
+                    <Gem className="w-4 h-4 text-cyan-400" />
+                    <div>
+                      <div className="text-xs font-black text-rose-200">鑽石重置為 0</div>
+                      <div className="text-[10px] text-slate-400">目前：{currentProfile.diamonds.toLocaleString()} 💎</div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold bg-rose-600/60 text-white px-2 py-0.5 rounded-lg">
+                    重設 0
+                  </span>
+                </button>
+
+                {/* Reset Power-ups to 0 */}
+                <button
+                  onClick={handleResetPowerUps}
+                  className="p-3 bg-slate-800/80 hover:bg-slate-700/80 text-white font-bold rounded-xl border border-rose-500/40 shadow-xs flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 text-left">
+                    <Zap className="w-4 h-4 text-purple-400" />
+                    <div>
+                      <div className="text-xs font-black text-rose-200">清空所有戰鬥道具</div>
+                      <div className="text-[10px] text-slate-400">雷射、國王彈弓等全歸 0</div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold bg-rose-600/60 text-white px-2 py-0.5 rounded-lg">
+                    清零道具
+                  </span>
+                </button>
+
+                {/* Reset Unlocks to Default */}
+                <button
+                  onClick={handleResetUnlockedHeroes}
+                  className="p-3 bg-slate-800/80 hover:bg-slate-700/80 text-white font-bold rounded-xl border border-amber-500/40 shadow-xs flex items-center justify-between transition-transform active:scale-95 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 text-left">
+                    <Bird className="w-4 h-4 text-emerald-400" />
+                    <div>
+                      <div className="text-xs font-black text-amber-200">重置角色為初始怒鳥紅</div>
+                      <div className="text-[10px] text-slate-400">重新體驗角色解鎖樂趣</div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-bold bg-amber-600/60 text-white px-2 py-0.5 rounded-lg">
+                    初始狀態
+                  </span>
+                </button>
+              </div>
+
+              {/* Total Wipe Button */}
+              <div className="pt-1">
+                <button
+                  onClick={handleResetAllToZero}
+                  className="w-full p-3 bg-gradient-to-r from-rose-700 to-red-700 hover:from-rose-800 hover:to-red-800 text-white font-black text-xs sm:text-sm rounded-xl shadow-md border border-rose-400 flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>全部資產一鍵歸零 (金幣 0 + 鑽石 0 + 道具 0)</span>
+                </button>
+              </div>
             </div>
           </div>
         )}

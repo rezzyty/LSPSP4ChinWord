@@ -1,0 +1,125 @@
+{
+  "profiles": [
+    {
+      "id": "melaine",
+      "name": "Melaine",
+      "avatar": "👧",
+      "titleZh": "喇沙女榜首 · Melaine",
+      "color": "#EC4899",
+      "coins": 600,
+      "diamonds": 20,
+      "highScore": 12500,
+      "totalScore": 48500,
+      "totalQuestionsAnswered": 45,
+      "totalQuestionsCorrect": 42,
+      "completedSets": [
+        "l1-set-1",
+        "l1-set-2",
+        "l2-set-1"
+      ],
+      "piggiesDefeated": 28,
+      "starsEarned": 9,
+      "highestStreak": 12,
+      "lastPlayedAt": 1794135495443,
+      "unlockedBirds": [
+        "red",
+        "chuck",
+        "blues"
+      ],
+      "selectedBird": "red",
+      "unlockedBackgrounds": [
+        "green_hills",
+        "night_sky"
+      ],
+      "selectedBackground": "green_hills",
+      "powerUps": {
+        "laser_scope": 3,
+        "king_sling": 2,
+        "super_seed": 2,
+        "speed_potion": 1,
+        "tnt_rain": 1
+      },
+      "activePowerUps": {}
+    },
+    {
+      "id": "jayden",
+      "name": "Jayden",
+      "avatar": "👦",
+      "titleZh": "神級彈弓手 · Jayden",
+      "color": "#3B82F6",
+      "coins": 850,
+      "diamonds": 25,
+      "highScore": 15800,
+      "totalScore": 56200,
+      "totalQuestionsAnswered": 52,
+      "totalQuestionsCorrect": 49,
+      "completedSets": [
+        "l1-set-1",
+        "l2-set-1",
+        "l4-set-1",
+        "l8-set-1"
+      ],
+      "piggiesDefeated": 34,
+      "starsEarned": 12,
+      "highestStreak": 15,
+      "lastPlayedAt": 1794137295443,
+      "unlockedBirds": [
+        "red",
+        "bomb",
+        "chuck"
+      ],
+      "selectedBird": "bomb",
+      "unlockedBackgrounds": [
+        "green_hills",
+        "sunset_beach"
+      ],
+      "selectedBackground": "green_hills",
+      "powerUps": {
+        "laser_scope": 2,
+        "king_sling": 3,
+        "super_seed": 1,
+        "speed_potion": 2,
+        "tnt_rain": 2
+      },
+      "activePowerUps": {}
+    },
+    {
+      "id": "others",
+      "name": "Others",
+      "avatar": "🦉",
+      "titleZh": "客席探險家 · Guest",
+      "color": "#10B981",
+      "coins": 300,
+      "diamonds": 10,
+      "highScore": 8000,
+      "totalScore": 18000,
+      "totalQuestionsAnswered": 20,
+      "totalQuestionsCorrect": 18,
+      "completedSets": [
+        "l1-set-1"
+      ],
+      "piggiesDefeated": 12,
+      "starsEarned": 4,
+      "highestStreak": 6,
+      "lastPlayedAt": 1794139095443,
+      "unlockedBirds": [
+        "red"
+      ],
+      "selectedBird": "red",
+      "unlockedBackgrounds": [
+        "green_hills"
+      ],
+      "selectedBackground": "green_hills",
+      "powerUps": {
+        "laser_scope": 1,
+        "king_sling": 1,
+        "super_seed": 0,
+        "speed_potion": 0,
+        "tnt_rain": 0
+      },
+      "activePowerUps": {}
+    }
+  ],
+  "activeProfileId": "melaine",
+  "updatedAt": 1794139097230
+}

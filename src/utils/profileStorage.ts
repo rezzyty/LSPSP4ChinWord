@@ -114,12 +114,20 @@ export function getActiveProfileId(): 'melaine' | 'jayden' | 'others' {
 }
 
 /**
- * Set active profile ID in localStorage
+ * Set active profile ID in localStorage and sync to cloud server
  */
 export function setActiveProfileId(id: 'melaine' | 'jayden' | 'others') {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_ACTIVE_KEY, id);
+    // Auto-save active profile ID to server
+    fetch('/api/profiles/active', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activeProfileId: id }),
+    }).catch(() => {
+      // offline fallback
+    });
   } catch {
     // ignore
   }
@@ -154,14 +162,36 @@ export function loadProfile(id: 'melaine' | 'jayden' | 'others'): UserProfile {
 }
 
 /**
- * Save profile to localStorage
+ * Save profile locally and auto-save in background to server for cross-device sync
  */
 export function saveProfile(profile: UserProfile) {
   if (typeof window === 'undefined') return;
   try {
+    // 1. Instant local save
     localStorage.setItem(`${STORAGE_PREFIX}${profile.id}`, JSON.stringify(profile));
+
+    // 2. Real-time background cloud auto-save (cross-device sync)
+    fetch(`/api/profiles/${profile.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profile),
+    }).catch(() => {
+      // graceful offline fallback
+    });
   } catch (e) {
     console.error('Failed to save profile', e);
+  }
+}
+
+/**
+ * Save profile to local storage only without network call
+ */
+function saveProfileLocally(profile: UserProfile) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`${STORAGE_PREFIX}${profile.id}`, JSON.stringify(profile));
+  } catch (e) {
+    console.error('Failed to save profile locally', e);
   }
 }
 
@@ -170,6 +200,98 @@ export function saveProfile(profile: UserProfile) {
  */
 export function loadAllProfiles(): UserProfile[] {
   return [loadProfile('melaine'), loadProfile('jayden'), loadProfile('others')];
+}
+
+/**
+ * Fetch all profiles from server (ensuring latest cloud progress on any new device)
+ */
+export async function syncProfilesFromServer(): Promise<{
+  profiles: UserProfile[];
+  activeProfileId?: 'melaine' | 'jayden' | 'others';
+} | null> {
+  if (typeof window === 'undefined') return null;
+  try {
+    const res = await fetch('/api/profiles');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.profiles) && data.profiles.length > 0) {
+        data.profiles.forEach((p: UserProfile) => {
+          saveProfileLocally(p);
+        });
+        if (data.activeProfileId) {
+          try {
+            localStorage.setItem(STORAGE_ACTIVE_KEY, data.activeProfileId);
+          } catch {
+            // ignore
+          }
+        }
+        return {
+          profiles: data.profiles,
+          activeProfileId: data.activeProfileId,
+        };
+      }
+    }
+  } catch (err) {
+    console.log('[Cloud Sync] Server not reachable or offline, running on local storage cache');
+  }
+  return null;
+}
+
+/**
+ * Force manual full sync of local profiles up to the cloud server
+ */
+export async function forceUploadProfilesToServer(profiles: UserProfile[], activeId?: string): Promise<boolean> {
+  try {
+    const res = await fetch('/api/profiles/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profiles, activeProfileId: activeId }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reset rankings (high scores, stars, streak, piggies defeated) across profiles
+ */
+export async function resetRankings(
+  targetProfileId: 'all' | 'melaine' | 'jayden' | 'others' = 'all'
+): Promise<UserProfile[]> {
+  const all = loadAllProfiles();
+  const updated = all.map((p) => {
+    if (targetProfileId === 'all' || p.id === targetProfileId) {
+      return {
+        ...p,
+        highScore: 0,
+        totalScore: 0,
+        piggiesDefeated: 0,
+        highestStreak: 0,
+        totalQuestionsAnswered: 0,
+        totalQuestionsCorrect: 0,
+        completedSets: [],
+        starsEarned: 0,
+      };
+    }
+    return p;
+  });
+
+  // 1. Update local storage
+  updated.forEach((p) => saveProfileLocally(p));
+
+  // 2. Sync reset to server
+  try {
+    await fetch('/api/rankings/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetProfileId }),
+    });
+  } catch {
+    // offline fallback
+  }
+
+  return updated;
 }
 
 /**
