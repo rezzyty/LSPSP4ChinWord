@@ -1,4 +1,13 @@
-export type BirdType = 'red' | 'chuck' | 'bomb' | 'matilda' | 'blues';
+export type BirdType =
+  | 'red'
+  | 'chuck'
+  | 'bomb'
+  | 'matilda'
+  | 'blues'
+  | 'terence'
+  | 'hal'
+  | 'stella'
+  | 'mighty_eagle';
 
 export interface BirdInfo {
   id: BirdType;
@@ -7,6 +16,8 @@ export interface BirdInfo {
   color: string;
   specialSkill: string;
   dialogue: string;
+  costCoins?: number;
+  costDiamonds?: number;
 }
 
 export interface VocabularyWord {

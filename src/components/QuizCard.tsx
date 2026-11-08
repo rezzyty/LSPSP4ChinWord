@@ -62,17 +62,17 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   const renderSentence = () => {
     const parts = question.sentence.split('______');
     return (
-      <div className="text-lg sm:text-xl font-bold leading-relaxed tracking-wide text-amber-950 font-serif">
+      <div className="text-xl sm:text-2xl lg:text-3xl font-black leading-relaxed tracking-wide text-amber-950 font-serif">
         {parts[0]}
         <span
-          className={`inline-flex items-center justify-center min-w-[5rem] px-3 py-0.5 mx-1.5 rounded-xl border-2 font-black transition-all ${
+          className={`inline-flex items-center justify-center min-w-[6rem] sm:min-w-[8rem] px-4 py-1 mx-2 rounded-2xl border-3 font-black transition-all ${
             isCorrect === true
-              ? 'bg-emerald-100 border-emerald-500 text-emerald-800 scale-105 shadow-sm animate-bounce'
+              ? 'bg-emerald-100 border-emerald-500 text-emerald-800 scale-105 shadow-md animate-bounce'
               : isCorrect === false
               ? 'bg-rose-100 border-rose-500 text-rose-800 animate-shake'
               : selectedWord
               ? 'bg-amber-100 border-amber-400 text-amber-900'
-              : 'bg-white/90 border-dashed border-amber-400 text-amber-500 hover:border-amber-600'
+              : 'bg-white/95 border-dashed border-amber-400 text-amber-500 hover:border-amber-600'
           }`}
         >
           {selectedWord || '______'}
@@ -83,64 +83,64 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   };
 
   return (
-    <div className="relative bg-white rounded-3xl p-4 sm:p-6 shadow-lg border-3 border-amber-200 flex flex-col justify-between h-full">
+    <div className="relative bg-white rounded-3xl p-4 sm:p-7 shadow-lg border-3 border-amber-200 flex flex-col justify-between h-full">
       <div>
         {/* Question Counter & Action Header */}
         <div className="flex items-center justify-between pb-3 border-b border-amber-100">
           <div className="flex items-center gap-2">
-            <span className="bg-amber-500 text-white font-extrabold text-xs sm:text-sm px-3 py-1 rounded-full shadow-xs">
+            <span className="bg-amber-500 text-white font-extrabold text-xs sm:text-sm px-3.5 py-1.5 rounded-full shadow-xs">
               第 {currentIndex + 1} / {totalQuestions} 題
             </span>
             {isCorrect === true && (
-              <span className="flex items-center gap-1 text-emerald-700 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> 正確解答！
+              <span className="flex items-center gap-1 text-emerald-700 font-bold text-xs bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> 正確解答！+50 🪙
               </span>
             )}
           </div>
 
           {/* Read-aloud & Hint Controls */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleReadSentence}
               disabled={isSpeaking}
-              className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl font-semibold text-xs border border-amber-200 transition-colors shadow-xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl font-bold text-xs sm:text-sm border border-amber-200 transition-colors shadow-xs cursor-pointer active:scale-95"
               title="點擊朗讀題目句子"
             >
-              <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-amber-600 animate-pulse' : 'text-amber-700'}`} />
+              <Volume2 className={`w-4 h-4 ${isSpeaking ? 'text-amber-600 animate-pulse' : 'text-amber-700'}`} />
               <span>朗讀句子</span>
             </button>
 
             {question.hint && (
               <button
                 onClick={() => setShowHint(!showHint)}
-                className="flex items-center gap-1 px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-xl font-semibold text-xs border border-sky-200 transition-colors shadow-xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-xl font-bold text-xs sm:text-sm border border-sky-200 transition-colors shadow-xs cursor-pointer active:scale-95"
               >
-                <HelpCircle className="w-3.5 h-3.5 text-sky-600" />
+                <HelpCircle className="w-4 h-4 text-sky-600" />
                 <span>{showHint ? '隱藏提示' : '詞義提示'}</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Main Sentence Card */}
-        <div className="my-3 sm:my-4 p-4 bg-gradient-to-r from-amber-50/80 via-orange-50/60 to-amber-50/80 rounded-2xl border-2 border-amber-200/90 shadow-inner">
+        {/* Main Sentence Card with Large Clear Typography */}
+        <div className="my-4 sm:my-5 p-5 sm:p-6 bg-gradient-to-r from-amber-50/90 via-orange-50/70 to-amber-50/90 rounded-2xl border-2 border-amber-200/90 shadow-inner">
           {renderSentence()}
         </div>
 
         {/* Hint Banner if toggled */}
         {showHint && question.hint && (
-          <div className="mb-3 p-2.5 bg-sky-50 border-l-4 border-sky-500 rounded-r-xl text-sky-900 text-xs sm:text-sm font-medium animate-fadeIn">
-            💡 <span className="font-bold">溫習指引：</span> {question.hint}
+          <div className="mb-4 p-3.5 bg-sky-50 border-l-4 border-sky-500 rounded-r-2xl text-sky-950 text-sm sm:text-base font-semibold leading-relaxed animate-fadeIn">
+            💡 <span className="font-extrabold text-sky-800">四年級溫習指引：</span> {question.hint}
           </div>
         )}
 
-        {/* Multiple Choice Options Grid (Order randomized per session) */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 my-3">
+        {/* Multiple Choice Options Grid (Large readable buttons for iPad Pro 13" and mobile touch) */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 my-3 sm:my-4">
           {question.options.map((opt, idx) => {
             const isSelected = selectedWord === opt;
             const isThisCorrect = opt === question.answer;
 
-            let btnClass = 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-950';
+            let btnClass = 'bg-amber-50/90 hover:bg-amber-100/90 border-amber-300 text-amber-950';
 
             if (isCorrect === true && isThisCorrect) {
               btnClass = 'bg-emerald-500 border-emerald-600 text-white ring-4 ring-emerald-200 shadow-md scale-102';
@@ -154,18 +154,18 @@ export const QuizCard: React.FC<QuizCardProps> = ({
               <div key={`${opt}-${idx}`} className="relative group">
                 <button
                   onClick={() => handleSelectOption(opt)}
-                  className={`w-full py-3 sm:py-3.5 px-3 rounded-2xl border-b-4 font-black text-lg sm:text-xl transition-all shadow-sm active:translate-y-1 active:border-b-0 flex items-center justify-center cursor-pointer ${btnClass}`}
+                  className={`w-full min-h-[58px] sm:min-h-[66px] lg:min-h-[72px] py-3.5 sm:py-4 px-3 rounded-2xl border-b-4 font-black text-xl sm:text-2xl lg:text-3xl transition-all shadow-sm active:translate-y-1 active:border-b-0 flex items-center justify-center cursor-pointer select-none ${btnClass}`}
                 >
-                  <span>{opt}</span>
+                  <span className="tracking-wide font-serif">{opt}</span>
                 </button>
 
                 {/* Pronounce single word icon button */}
                 <button
                   onClick={(e) => handleReadWord(opt, e)}
-                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-white/80 hover:bg-white text-slate-700 flex items-center justify-center shadow-xs text-xs opacity-60 hover:opacity-100 transition-opacity"
+                  className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white/90 hover:bg-white text-slate-700 flex items-center justify-center shadow-xs text-xs opacity-75 hover:opacity-100 transition-opacity cursor-pointer"
                   title={`聽取「${opt}」發音`}
                 >
-                  <Volume2 className="w-3 h-3 text-amber-800" />
+                  <Volume2 className="w-3.5 h-3.5 text-amber-800" />
                 </button>
               </div>
             );

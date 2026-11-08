@@ -26,6 +26,8 @@ interface ResultModalProps {
   wrongQuestions: { question: Question; userAnswer: string }[];
   vocabularies?: VocabularyWord[];
   dialect?: ChineseDialect;
+  earnedCoins?: number;
+  earnedDiamonds?: number;
   onRestartSession: () => void;
   onOpenMiniGame: () => void;
   onSwitchToCodex: () => void;
@@ -40,6 +42,8 @@ export const ResultModal: React.FC<ResultModalProps> = ({
   wrongQuestions,
   vocabularies = [],
   dialect = 'zh-HK',
+  earnedCoins = 350,
+  earnedDiamonds = 10,
   onRestartSession,
   onOpenMiniGame,
   onSwitchToCodex,
@@ -287,23 +291,29 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-3 gap-2.5 my-4 text-center shrink-0">
-              <div className="p-2.5 sm:p-3 bg-white/90 rounded-2xl border border-amber-200 shadow-xs">
-                <span className="block text-[11px] font-bold text-amber-700">總得分</span>
-                <span className="text-xl sm:text-2xl font-black text-amber-900 font-mono">
+            <div className="grid grid-cols-4 gap-2 sm:gap-2.5 my-3 text-center shrink-0">
+              <div className="p-2 sm:p-2.5 bg-white/90 rounded-2xl border border-amber-200 shadow-xs">
+                <span className="block text-[10px] font-bold text-amber-700">總得分</span>
+                <span className="text-lg sm:text-xl font-black text-amber-900 font-mono">
                   {score.toLocaleString()}
                 </span>
               </div>
-              <div className="p-2.5 sm:p-3 bg-white/90 rounded-2xl border border-amber-200 shadow-xs">
-                <span className="block text-[11px] font-bold text-emerald-700">正確題數</span>
-                <span className="text-xl sm:text-2xl font-black text-emerald-700 font-mono">
+              <div className="p-2 sm:p-2.5 bg-white/90 rounded-2xl border border-amber-200 shadow-xs">
+                <span className="block text-[10px] font-bold text-emerald-700">正確題數</span>
+                <span className="text-lg sm:text-xl font-black text-emerald-700 font-mono">
                   {correctCount} / {totalQuestions}
                 </span>
               </div>
-              <div className="p-2.5 sm:p-3 bg-white/90 rounded-2xl border border-amber-200 shadow-xs">
-                <span className="block text-[11px] font-bold text-orange-700">消滅搗蛋豬</span>
-                <span className="text-xl sm:text-2xl font-black text-orange-700 font-mono">
-                  {piggiesDefeated} 隻
+              <div className="p-2 sm:p-2.5 bg-white/90 rounded-2xl border border-amber-200 shadow-xs">
+                <span className="block text-[10px] font-bold text-amber-800">金幣獎勵</span>
+                <span className="text-lg sm:text-xl font-black text-yellow-600 font-mono">
+                  +{earnedCoins} 🪙
+                </span>
+              </div>
+              <div className="p-2 sm:p-2.5 bg-white/90 rounded-2xl border border-amber-200 shadow-xs">
+                <span className="block text-[10px] font-bold text-sky-700">鑽石獎勵</span>
+                <span className="text-lg sm:text-xl font-black text-sky-700 font-mono">
+                  +{earnedDiamonds} 💎
                 </span>
               </div>
             </div>

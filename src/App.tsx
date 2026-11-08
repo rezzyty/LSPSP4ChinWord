@@ -3,15 +3,26 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { LESSONS_DATA } from './data/lessonsData';
 import { Question, BirdType } from './types/quiz';
+import { UserProfile, ProfileId, PowerUpId } from './types/profile';
+import {
+  loadAllProfiles,
+  saveProfile,
+  getActiveProfileId,
+  setActiveProfileId
+} from './utils/profileStorage';
 import { HeaderNav } from './components/HeaderNav';
 import { AngryBirdsSlingshotCanvas } from './components/AngryBirdsSlingshotCanvas';
 import { QuizCard } from './components/QuizCard';
 import { VocabularyCodex } from './components/VocabularyCodex';
 import { ResultModal } from './components/ResultModal';
 import { SlingshotMiniGameModal } from './components/SlingshotMiniGameModal';
+import { ProfileSwitcherModal } from './components/ProfileSwitcherModal';
+import { LeaderboardModal } from './components/LeaderboardModal';
+import { ShopAndRewardsModal } from './components/ShopAndRewardsModal';
+import { SecretChargerModal } from './components/SecretChargerModal';
 import { soundEffects } from './utils/soundEffects';
 import { ChineseDialect } from './utils/speech';
 import {
@@ -22,8 +33,7 @@ import {
   ChevronDown,
   Crosshair,
   Sparkles,
-  BookOpen,
-  LayoutTemplate
+  BookOpen
 } from 'lucide-react';
 
 // Fisher-Yates array shuffle algorithm
@@ -37,17 +47,35 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 export default function App() {
+  // Profiles and user state
+  const [activeProfileId, setActiveProfileIdState] = useState<ProfileId>(() => getActiveProfileId());
+  const [profiles, setProfiles] = useState<UserProfile[]>(() => loadAllProfiles());
+
+  const currentProfile = useMemo(() => {
+    return profiles.find((p) => p.id === activeProfileId) || profiles[0];
+  }, [profiles, activeProfileId]);
+
+  // Modal visibility states
+  const [isProfileSwitcherOpen, setIsProfileSwitcherOpen] = useState<boolean>(false);
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState<boolean>(false);
+  const [isShopOpen, setIsShopOpen] = useState<boolean>(false);
+  const [isSecretChargerOpen, setIsSecretChargerOpen] = useState<boolean>(false);
+  const [isMiniGameOpen, setIsMiniGameOpen] = useState<boolean>(false);
+  const [showLockedAlert, setShowLockedAlert] = useState<boolean>(false);
+
   // Navigation & View state
   const [currentView, setCurrentView] = useState<'quiz' | 'codex'>('quiz');
   const [activeLessonId, setActiveLessonId] = useState<string>('lesson-1');
   const [activeSetId, setActiveSetId] = useState<string>('l1-set-1');
 
   // Slingshot & Bird state
-  const [activeBird, setActiveBird] = useState<BirdType>('red');
+  const [activeBird, setActiveBird] = useState<BirdType>(currentProfile.selectedBird);
   const [launchTrigger, setLaunchTrigger] = useState<number>(0);
-  const [isMiniGameOpen, setIsMiniGameOpen] = useState<boolean>(false);
-  const [hasCompletedAtLeastOneSet, setHasCompletedAtLeastOneSet] = useState<boolean>(false);
-  const [showLockedAlert, setShowLockedAlert] = useState<boolean>(false);
+
+  // Sync active bird whenever profile changes
+  useEffect(() => {
+    setActiveBird(currentProfile.selectedBird);
+  }, [currentProfile.selectedBird, currentProfile.id]);
 
   // Sound & Dialect
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -62,6 +90,27 @@ export default function App() {
   const [piggiesDefeated, setPiggiesDefeated] = useState<number>(0);
   const [isFinished, setIsFinished] = useState<boolean>(false);
   const [wrongQuestions, setWrongQuestions] = useState<{ question: Question; userAnswer: string }[]>([]);
+
+  // Track if current profile has completed at least 1 set
+  const hasCompletedAtLeastOneSet = useMemo(() => {
+    return currentProfile.completedSets.length > 0;
+  }, [currentProfile.completedSets]);
+
+  // Profile update handler
+  const handleProfileUpdated = useCallback((updated: UserProfile) => {
+    saveProfile(updated);
+    setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+  }, []);
+
+  // Profile switch handler
+  const handleSwitchProfile = useCallback((id: ProfileId) => {
+    setActiveProfileId(id);
+    setActiveProfileIdState(id);
+    const target = profiles.find((p) => p.id === id);
+    if (target) {
+      setActiveBird(target.selectedBird);
+    }
+  }, [profiles]);
 
   // Current Lesson data
   const currentLesson = useMemo(() => {
@@ -78,16 +127,11 @@ export default function App() {
 
   // Session Questions: Shuffled questions AND shuffled answer choices per session
   const randomizedQuestions = useMemo(() => {
-    // 1. Shuffle the question sequence
     const shuffledQuestions = shuffleArray(currentSet.questions);
-
-    // 2. Shuffle options for each individual question
     return shuffledQuestions.map((q) => ({
       ...q,
       options: shuffleArray(q.options),
     }));
-    // Re-evaluates whenever currentSet changes or sessionSeed changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSet, sessionSeed]);
 
   const currentQuestion = randomizedQuestions[currentQuestionIndex] || randomizedQuestions[0];
@@ -110,37 +154,44 @@ export default function App() {
     if (target && target.questionSets[0]) {
       setActiveSetId(target.questionSets[0].id);
     }
-    setCurrentQuestionIndex(0);
-    setSessionSeed((s) => s + 1);
-    setScore(0);
-    setStreak(0);
-    setPiggiesDefeated(0);
-    setWrongQuestions([]);
-    setIsFinished(false);
+    handleRestartSession();
   };
 
   // Handle set change within current lesson
   const handleSetChange = (setId: string) => {
     setActiveSetId(setId);
-    setCurrentQuestionIndex(0);
-    setSessionSeed((s) => s + 1);
-    setScore(0);
-    setStreak(0);
-    setPiggiesDefeated(0);
-    setWrongQuestions([]);
-    setIsFinished(false);
+    handleRestartSession();
   };
 
   // Handle correct answer
   const handleAnswerCorrect = () => {
     const pointsGained = 1000 + streak * 100;
-    setScore((s) => s + pointsGained);
+    const newScore = score + pointsGained;
+    const newStreak = streak + 1;
+
+    setScore(newScore);
     setStreak((st) => {
       const next = st + 1;
       if (next > highestStreak) setHighestStreak(next);
       return next;
     });
     setPiggiesDefeated((p) => p + 1);
+
+    // Reward coins & bonus diamond on 5+ streak milestone
+    const coinsEarned = 50;
+    const diamondEarned = newStreak % 5 === 0 ? 1 : 0;
+
+    const updatedProfile: UserProfile = {
+      ...currentProfile,
+      coins: currentProfile.coins + coinsEarned,
+      diamonds: currentProfile.diamonds + diamondEarned,
+      totalQuestionsAnswered: currentProfile.totalQuestionsAnswered + 1,
+      totalQuestionsCorrect: currentProfile.totalQuestionsCorrect + 1,
+      piggiesDefeated: currentProfile.piggiesDefeated + 1,
+      totalScore: currentProfile.totalScore + pointsGained,
+      highScore: Math.max(currentProfile.highScore, newScore),
+    };
+    handleProfileUpdated(updatedProfile);
 
     // Fire slingshot
     setLaunchTrigger(Date.now());
@@ -157,6 +208,12 @@ export default function App() {
         return prev;
       });
     }
+
+    const updatedProfile: UserProfile = {
+      ...currentProfile,
+      totalQuestionsAnswered: currentProfile.totalQuestionsAnswered + 1,
+    };
+    handleProfileUpdated(updatedProfile);
   };
 
   // Handle next question
@@ -165,7 +222,27 @@ export default function App() {
       setCurrentQuestionIndex((i) => i + 1);
     } else {
       setIsFinished(true);
-      setHasCompletedAtLeastOneSet(true);
+
+      // Reward completion bonus to current profile
+      const setCompletedId = `${activeLessonId}-${currentSet.id}`;
+      const isAlreadyCompleted = currentProfile.completedSets.includes(setCompletedId);
+      const newCompletedSets = isAlreadyCompleted
+        ? currentProfile.completedSets
+        : [...currentProfile.completedSets, setCompletedId];
+
+      const completionCoins = 350;
+      const completionDiamonds = 10;
+      const completionStars = isAlreadyCompleted ? 0 : 3;
+
+      const finalProfile: UserProfile = {
+        ...currentProfile,
+        coins: currentProfile.coins + completionCoins,
+        diamonds: currentProfile.diamonds + completionDiamonds,
+        starsEarned: currentProfile.starsEarned + completionStars,
+        completedSets: newCompletedSets,
+        highScore: Math.max(currentProfile.highScore, score),
+      };
+      handleProfileUpdated(finalProfile);
     }
   };
 
@@ -190,6 +267,19 @@ export default function App() {
     setDialect((d) => (d === 'zh-HK' ? 'zh-CN' : 'zh-HK'));
   };
 
+  // Toggle active power-up
+  const handleTogglePowerUp = (id: PowerUpId) => {
+    const isCurrentlyActive = !!currentProfile.activePowerUps[id];
+    const updated: UserProfile = {
+      ...currentProfile,
+      activePowerUps: {
+        ...currentProfile.activePowerUps,
+        [id]: !isCurrentlyActive,
+      },
+    };
+    handleProfileUpdated(updated);
+  };
+
   return (
     <div
       className="min-h-screen flex flex-col bg-amber-100/60 font-sans selection:bg-amber-300 selection:text-amber-950"
@@ -197,7 +287,7 @@ export default function App() {
         backgroundImage: `radial-gradient(circle at 10% 20%, rgba(254, 240, 138, 0.35) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(186, 230, 253, 0.35) 0%, transparent 40%)`,
       }}
     >
-      {/* Top Header Contract */}
+      {/* Top Header with Profile, Coins, Diamonds & Actions */}
       <HeaderNav
         currentView={currentView}
         onViewChange={setCurrentView}
@@ -208,9 +298,14 @@ export default function App() {
         onToggleDialect={handleToggleDialect}
         activeLessonTitle={currentLesson.title}
         hasCompletedAtLeastOneSet={hasCompletedAtLeastOneSet}
+        currentProfile={currentProfile}
+        onOpenProfileSwitcher={() => setIsProfileSwitcherOpen(true)}
+        onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
+        onOpenShop={() => setIsShopOpen(true)}
+        onOpenSecretCharger={() => setIsSecretChargerOpen(true)}
       />
 
-      {/* Main Content Area - Optimized for NO SCROLL */}
+      {/* Main Content Area - Optimized for iPad Pro 13" and zero excessive scroll */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-5 py-3 sm:py-4 flex flex-col gap-3">
         {/* Compact Single-Row Toolbar (Lesson, Set, Seed, Mode) */}
         <div className="bg-white/95 rounded-2xl px-3 sm:px-4 py-2.5 shadow-sm border border-amber-200 flex flex-wrap items-center justify-between gap-2.5">
@@ -258,7 +353,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleRestartSession}
-              className="flex items-center gap-1 px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl font-bold text-xs border border-amber-300 transition-colors shadow-2xs"
+              className="flex items-center gap-1 px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl font-bold text-xs border border-amber-300 transition-colors shadow-2xs cursor-pointer"
               title="重新打亂題目與選項順序"
             >
               <Shuffle className="w-3.5 h-3.5 text-amber-700" />
@@ -269,7 +364,7 @@ export default function App() {
             <div className="flex items-center bg-amber-100/80 p-0.5 rounded-xl border border-amber-300">
               <button
                 onClick={() => setCurrentView('quiz')}
-                className={`flex items-center gap-1 px-3 py-1 rounded-lg font-bold text-xs transition-all ${
+                className={`flex items-center gap-1 px-3 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer ${
                   currentView === 'quiz' ? 'bg-amber-500 text-white shadow-2xs' : 'text-amber-900 hover:text-amber-950'
                 }`}
               >
@@ -278,7 +373,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setCurrentView('codex')}
-                className={`flex items-center gap-1 px-3 py-1 rounded-lg font-bold text-xs transition-all ${
+                className={`flex items-center gap-1 px-3 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer ${
                   currentView === 'codex' ? 'bg-amber-500 text-white shadow-2xs' : 'text-amber-900 hover:text-amber-950'
                 }`}
               >
@@ -294,16 +389,35 @@ export default function App() {
           <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch min-h-0">
             {/* Left Column (5 cols): Slingshot Stage + Compact HUD */}
             <div className="lg:col-span-5 flex flex-col gap-2.5">
-              {/* Slingshot Arena Canvas */}
+              {/* Slingshot Arena Canvas with Theme & Power-ups */}
               <div className="w-full">
                 <AngryBirdsSlingshotCanvas
                   activeBird={activeBird}
-                  onBirdChange={setActiveBird}
+                  onBirdChange={(bird) => {
+                    setActiveBird(bird);
+                    const updated = { ...currentProfile, selectedBird: bird };
+                    handleProfileUpdated(updated);
+                  }}
                   triggerLaunch={launchTrigger}
-                  onPiggyDefeated={(pts) => setScore((s) => s + pts)}
+                  onPiggyDefeated={(pts) => {
+                    setScore((s) => s + pts);
+                    const addedCoins = 30;
+                    const updated: UserProfile = {
+                      ...currentProfile,
+                      coins: currentProfile.coins + addedCoins,
+                      piggiesDefeated: currentProfile.piggiesDefeated + 1,
+                      totalScore: currentProfile.totalScore + pts,
+                      highScore: Math.max(currentProfile.highScore, score + pts),
+                    };
+                    handleProfileUpdated(updated);
+                  }}
                   interactive={true}
                   compact={true}
-                  canvasHeight={205}
+                  canvasHeight={215}
+                  theme={currentProfile.selectedBackground}
+                  activePowerUps={currentProfile.activePowerUps}
+                  onTogglePowerUp={handleTogglePowerUp}
+                  powerUpInventory={currentProfile.powerUps}
                 />
               </div>
 
@@ -344,9 +458,9 @@ export default function App() {
                   </div>
 
                   <button
-                    onClick={() => setIsMiniGameOpen(true)}
-                    className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold shadow-2xs transition-transform hover:scale-105"
-                    title="自由彈弓靶場"
+                    onClick={handleOpenMiniGame}
+                    className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold shadow-2xs transition-transform hover:scale-105 cursor-pointer"
+                    title={hasCompletedAtLeastOneSet ? "自由彈弓靶場" : "需先完成1組練習以解鎖靶場"}
                   >
                     <Crosshair className="w-3 h-3" />
                     <span>靶場</span>
@@ -361,7 +475,7 @@ export default function App() {
                   <button
                     key={set.id}
                     onClick={() => handleSetChange(set.id)}
-                    className={`px-2 py-0.5 rounded-md transition-colors shrink-0 ${
+                    className={`px-2 py-0.5 rounded-md transition-colors shrink-0 cursor-pointer ${
                       currentSet.id === set.id
                         ? 'bg-amber-500 text-white shadow-2xs font-black'
                         : 'text-amber-800 hover:bg-amber-200'
@@ -412,6 +526,8 @@ export default function App() {
           wrongQuestions={wrongQuestions}
           vocabularies={currentLesson.vocabularies}
           dialect={dialect}
+          earnedCoins={350}
+          earnedDiamonds={10}
           onRestartSession={handleRestartSession}
           onOpenMiniGame={() => {
             setIsFinished(false);
@@ -430,6 +546,46 @@ export default function App() {
         isOpen={isMiniGameOpen}
         onClose={() => setIsMiniGameOpen(false)}
         earnedScore={score}
+        currentProfile={currentProfile}
+        onProfileUpdated={handleProfileUpdated}
+      />
+
+      {/* 3-Account Profile Switcher Modal */}
+      <ProfileSwitcherModal
+        isOpen={isProfileSwitcherOpen}
+        onClose={() => setIsProfileSwitcherOpen(false)}
+        profiles={profiles}
+        activeProfileId={activeProfileId}
+        onSelectProfile={handleSwitchProfile}
+      />
+
+      {/* Real-time Leaderboard Modal */}
+      <LeaderboardModal
+        isOpen={isLeaderboardOpen}
+        onClose={() => setIsLeaderboardOpen(false)}
+        profiles={profiles}
+        activeProfileId={activeProfileId}
+        onSelectProfile={handleSwitchProfile}
+      />
+
+      {/* Rewards & Equipment Store Modal */}
+      <ShopAndRewardsModal
+        isOpen={isShopOpen}
+        onClose={() => setIsShopOpen(false)}
+        profile={currentProfile}
+        onProfileUpdated={handleProfileUpdated}
+        onOpenSecretCharger={() => {
+          setIsShopOpen(false);
+          setIsSecretChargerOpen(true);
+        }}
+      />
+
+      {/* Secret Resource Charger Modal */}
+      <SecretChargerModal
+        isOpen={isSecretChargerOpen}
+        onClose={() => setIsSecretChargerOpen(false)}
+        currentProfile={currentProfile}
+        onProfileUpdated={handleProfileUpdated}
       />
 
       {/* Locked MiniGame Alert Modal */}
@@ -443,12 +599,12 @@ export default function App() {
               自由彈弓靶場尚未解鎖！
             </h3>
             <p className="text-sm text-slate-700 font-medium leading-relaxed">
-              為了鼓勵認真學習，請先完成至少 **1 組中文詞語練習題**（完成全部題目並檢視成績），即可解鎖刺激有趣的彈弓打豬靶場！
+              為了鼓勵認真學習，請先完成至少 <strong>1 組中文詞語練習題</strong>（完成全部題目並檢視成績），即可解鎖刺激有趣的彈弓打豬靶場！
             </p>
             <div className="pt-2">
               <button
                 onClick={() => setShowLockedAlert(false)}
-                className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-sm rounded-2xl shadow-md border-b-4 border-amber-700 transition-transform active:scale-95"
+                className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-sm rounded-2xl shadow-md border-b-4 border-amber-700 transition-transform active:scale-95 cursor-pointer"
               >
                 我知道了，馬上開始做練習！ 🚀
               </button>
@@ -459,3 +615,4 @@ export default function App() {
     </div>
   );
 }
+
