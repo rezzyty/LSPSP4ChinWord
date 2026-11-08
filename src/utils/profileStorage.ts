@@ -180,6 +180,7 @@ export function chargeResources(
   params: {
     addCoins?: number;
     addDiamonds?: number;
+    addPowerUps?: number;
     unlockAllBirds?: boolean;
     unlockAllBackgrounds?: boolean;
     fillPowerUps?: number;
@@ -193,6 +194,16 @@ export function chargeResources(
   }
   if (params.addDiamonds) {
     p.diamonds = Math.max(0, p.diamonds + params.addDiamonds);
+  }
+  if (params.addPowerUps) {
+    const add = params.addPowerUps;
+    p.powerUps = {
+      laser_scope: (p.powerUps.laser_scope || 0) + add,
+      king_sling: (p.powerUps.king_sling || 0) + add,
+      super_seed: (p.powerUps.super_seed || 0) + add,
+      speed_potion: (p.powerUps.speed_potion || 0) + add,
+      tnt_rain: (p.powerUps.tnt_rain || 0) + add,
+    };
   }
   if (params.unlockAllBirds) {
     p.unlockedBirds = [

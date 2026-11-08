@@ -7,8 +7,7 @@ import {
   Sparkles,
   Trophy,
   ShoppingBag,
-  Users,
-  KeyRound
+  Users
 } from 'lucide-react';
 import { ChineseDialect } from '../utils/speech';
 import { UserProfile } from '../types/profile';
@@ -176,15 +175,6 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
             title="實時排行榜"
           >
             <Trophy className="w-4 h-4" />
-          </button>
-
-          {/* Secret Charger Quick Trigger */}
-          <button
-            onClick={onOpenSecretCharger}
-            className="p-2 rounded-xl bg-indigo-900 hover:bg-indigo-800 text-yellow-400 border border-indigo-700 transition-colors cursor-pointer"
-            title="秘密資源充值器"
-          >
-            <KeyRound className="w-4 h-4" />
           </button>
 
           {/* Dialect Switcher (粵語 / 普通話) */}
